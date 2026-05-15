@@ -21,6 +21,9 @@ const qrUrl = document.querySelector("#qrUrl");
 const cleanupStart = document.querySelector("#cleanupStart");
 const cleanupEnd = document.querySelector("#cleanupEnd");
 const cleanupButton = document.querySelector("#cleanupButton");
+const cleanupPanelButton = document.querySelector("#cleanupPanelButton");
+const cleanupDialog = document.querySelector("#cleanupDialog");
+const cleanupClose = document.querySelector("#cleanupClose");
 const fileManagerButton = document.querySelector("#fileManagerButton");
 const fileExplorer = document.querySelector("#fileExplorer");
 const fileExplorerClose = document.querySelector("#fileExplorerClose");
@@ -43,6 +46,11 @@ document.querySelector("#refreshButton").addEventListener("click", refreshAll);
 sendTextButton.addEventListener("click", sendText);
 fileInput.addEventListener("change", () => uploadFiles(fileInput.files));
 cleanupButton?.addEventListener("click", cleanupRange);
+cleanupPanelButton?.addEventListener("click", openCleanupDialog);
+cleanupClose?.addEventListener("click", closeCleanupDialog);
+cleanupDialog?.addEventListener("click", (event) => {
+  if (event.target === cleanupDialog) closeCleanupDialog();
+});
 fileManagerButton?.addEventListener("click", openFileExplorer);
 fileExplorerClose?.addEventListener("click", closeFileExplorer);
 fileExplorer?.addEventListener("click", (event) => {
@@ -56,6 +64,9 @@ fileSearch?.addEventListener("input", () => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && fileExplorer && !fileExplorer.hidden) {
     closeFileExplorer();
+  }
+  if (event.key === "Escape" && cleanupDialog && !cleanupDialog.hidden) {
+    closeCleanupDialog();
   }
 });
 
@@ -235,6 +246,19 @@ function closeFileExplorer() {
   if (!fileExplorer) return;
   fileExplorer.hidden = true;
   document.body.classList.remove("explorer-open");
+}
+
+function openCleanupDialog() {
+  if (!cleanupDialog) return;
+  cleanupDialog.hidden = false;
+  document.body.classList.add("dialog-open");
+  cleanupStart?.focus();
+}
+
+function closeCleanupDialog() {
+  if (!cleanupDialog) return;
+  cleanupDialog.hidden = true;
+  document.body.classList.remove("dialog-open");
 }
 
 async function cleanupRange() {

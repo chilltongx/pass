@@ -16,6 +16,7 @@
         </div>
         <div class="topbar-actions">
           <button class="tool-button" id="fileManagerButton" type="button">文件</button>
+          <button class="tool-button danger-tool" id="cleanupPanelButton" type="button">清理</button>
           <button class="icon-button" id="refreshButton" type="button" title="刷新">
             <span aria-hidden="true">↻</span>
           </button>
@@ -51,25 +52,33 @@
         <div class="items" id="items"></div>
       </section>
 
-      <section class="cleanup" aria-label="清理记录">
-        <div class="section-title">
-          <h2>清理记录</h2>
-          <span>按日期删除文字和文件</span>
-        </div>
-        <div class="cleanup-form">
-          <label>
-            <span>开始日期</span>
-            <input id="cleanupStart" type="date">
-          </label>
-          <label>
-            <span>结束日期</span>
-            <input id="cleanupEnd" type="date">
-          </label>
-          <button class="danger" id="cleanupButton" type="button">清理</button>
-        </div>
-      </section>
-
     </main>
+
+    <section class="cleanup-dialog" id="cleanupDialog" aria-label="清理记录" hidden>
+      <div class="cleanup-shell">
+        <header class="cleanup-header">
+          <div>
+            <p class="eyebrow">Cleanup</p>
+            <h2>清理记录</h2>
+          </div>
+          <button class="icon-button" id="cleanupClose" type="button" title="关闭">×</button>
+        </header>
+        <div class="cleanup-body">
+          <p>选择日期范围后，会删除范围内的文字和文件。开始和结束当天都会包含在内。</p>
+          <div class="cleanup-form">
+            <label>
+              <span>开始日期</span>
+              <input id="cleanupStart" type="date">
+            </label>
+            <label>
+              <span>结束日期</span>
+              <input id="cleanupEnd" type="date">
+            </label>
+            <button class="danger" id="cleanupButton" type="button">清理</button>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <section class="file-explorer" id="fileExplorer" aria-label="文件管理" hidden>
       <div class="explorer-shell">

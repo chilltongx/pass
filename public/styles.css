@@ -46,6 +46,12 @@ input {
   margin-bottom: 20px;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .eyebrow {
   margin: 0 0 4px;
   color: var(--accent-dark);
@@ -73,6 +79,18 @@ h1 {
   background: var(--surface);
   color: var(--ink);
   cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+.tool-button {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  padding: 0 14px;
+  font-weight: 800;
   box-shadow: var(--shadow);
 }
 
@@ -416,31 +434,6 @@ time {
   color: var(--rose);
 }
 
-.manager-controls {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.manager-controls label {
-  display: grid;
-  gap: 6px;
-  color: var(--muted);
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.manager-controls select {
-  min-height: 42px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fff;
-  color: var(--ink);
-  padding: 0 10px;
-  outline-color: var(--accent);
-}
-
 .file-manager {
   display: grid;
   gap: 14px;
@@ -472,6 +465,186 @@ time {
 .file-day-items {
   display: grid;
   gap: 8px;
+}
+
+body.explorer-open {
+  overflow: hidden;
+}
+
+.file-explorer[hidden] {
+  display: none;
+}
+
+.file-explorer {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(32, 33, 36, 0.36);
+  padding: 18px;
+}
+
+.explorer-shell {
+  width: min(1180px, 100%);
+  height: min(760px, calc(100vh - 36px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 24px 80px rgba(20, 20, 20, 0.22);
+}
+
+.explorer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding: 14px 16px;
+}
+
+.explorer-header h2 {
+  font-size: 1.22rem;
+}
+
+.explorer-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.explorer-body {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+
+.explorer-sidebar {
+  min-height: 0;
+  overflow: auto;
+  border-right: 1px solid var(--line);
+  background: #fbf8f0;
+  padding: 12px;
+}
+
+.folder-group {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.folder-heading {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  padding: 0 8px;
+}
+
+.folder-button {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 0 8px;
+  text-align: left;
+}
+
+.folder-button.active {
+  border-color: #b8dcd5;
+  background: #e7f6f3;
+  color: var(--accent-dark);
+  font-weight: 800;
+}
+
+.folder-button small {
+  color: var(--muted);
+}
+
+.explorer-main {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  padding: 12px;
+}
+
+.explorer-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 10px;
+}
+
+.breadcrumb {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 0 12px;
+  color: var(--accent-dark);
+  font-weight: 800;
+}
+
+.search-field {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.search-field input {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  padding: 0 10px;
+  outline-color: var(--accent);
+}
+
+.explorer-list-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px 150px;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  padding: 0 8px 8px 78px;
+}
+
+.explorer-main .file-manager {
+  min-height: 0;
+  overflow: auto;
+  gap: 6px;
+  padding-top: 8px;
+}
+
+.explorer-file {
+  grid-template-columns: auto minmax(0, 1fr) 150px 150px;
+  box-shadow: none;
+}
+
+.explorer-file .file-date {
+  white-space: nowrap;
 }
 
 .cleanup-form {
@@ -525,6 +698,10 @@ time {
     margin-bottom: 12px;
   }
 
+  .topbar-actions {
+    align-self: flex-start;
+  }
+
   h1 {
     font-size: 3.2rem;
   }
@@ -559,8 +736,51 @@ time {
     flex: 1;
   }
 
-  .manager-controls {
+  .file-explorer {
+    padding: 8px;
+  }
+
+  .explorer-shell {
+    height: calc(100vh - 16px);
+  }
+
+  .explorer-header {
+    padding: 12px;
+  }
+
+  .explorer-body {
     grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .explorer-sidebar {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 10px;
+  }
+
+  .folder-group {
+    min-width: 180px;
+    margin-bottom: 0;
+  }
+
+  .explorer-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .explorer-list-header {
+    display: none;
+  }
+
+  .explorer-file {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .explorer-file .file-date {
+    grid-column: 2;
   }
 
   .cleanup-form {

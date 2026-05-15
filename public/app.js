@@ -1,6 +1,11 @@
 const state = {
   items: [],
-  qrUrl: ""
+  qrUrl: "",
+  fileManager: {
+    category: "all",
+    date: "all",
+    search: ""
+  }
 };
 
 const itemsEl = document.querySelector("#items");
@@ -16,10 +21,14 @@ const qrUrl = document.querySelector("#qrUrl");
 const cleanupStart = document.querySelector("#cleanupStart");
 const cleanupEnd = document.querySelector("#cleanupEnd");
 const cleanupButton = document.querySelector("#cleanupButton");
+const fileManagerButton = document.querySelector("#fileManagerButton");
+const fileExplorer = document.querySelector("#fileExplorer");
+const fileExplorerClose = document.querySelector("#fileExplorerClose");
 const fileManagerEl = document.querySelector("#fileManager");
 const fileManagerSummary = document.querySelector("#fileManagerSummary");
-const fileTypeFilter = document.querySelector("#fileTypeFilter");
-const fileDateFilter = document.querySelector("#fileDateFilter");
+const fileManagerFolders = document.querySelector("#fileManagerFolders");
+const fileManagerBreadcrumb = document.querySelector("#fileManagerBreadcrumb");
+const fileSearch = document.querySelector("#fileSearch");
 
 document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -34,8 +43,21 @@ document.querySelector("#refreshButton").addEventListener("click", refreshAll);
 sendTextButton.addEventListener("click", sendText);
 fileInput.addEventListener("change", () => uploadFiles(fileInput.files));
 cleanupButton?.addEventListener("click", cleanupRange);
-fileTypeFilter?.addEventListener("change", renderFileManager);
-fileDateFilter?.addEventListener("change", renderFileManager);
+fileManagerButton?.addEventListener("click", openFileExplorer);
+fileExplorerClose?.addEventListener("click", closeFileExplorer);
+fileExplorer?.addEventListener("click", (event) => {
+  if (event.target === fileExplorer) closeFileExplorer();
+});
+fileManagerFolders?.addEventListener("click", handleFolderClick);
+fileSearch?.addEventListener("input", () => {
+  state.fileManager.search = fileSearch.value.trim().toLowerCase();
+  renderFileManager();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && fileExplorer && !fileExplorer.hidden) {
+    closeFileExplorer();
+  }
+});
 
 if (cleanupStart && cleanupEnd) {
   const today = formatDateInput(new Date());
@@ -201,6 +223,20 @@ async function refresh() {
   setStatus(`${state.items.length} 条记录`);
 }
 
+function openFileExplorer() {
+  if (!fileExplorer) return;
+  fileExplorer.hidden = false;
+  document.body.classList.add("explorer-open");
+  renderFileManager();
+  fileSearch?.focus();
+}
+
+function closeFileExplorer() {
+  if (!fileExplorer) return;
+  fileExplorer.hidden = true;
+  document.body.classList.remove("explorer-open");
+}
+
 async function cleanupRange() {
   const startDate = cleanupStart?.value || "";
   const endDate = cleanupEnd?.value || "";
@@ -242,22 +278,18 @@ function renderFileManager() {
   if (!fileManagerEl) return;
 
   const files = state.items.filter((item) => item.type === "file");
-  syncFileDateOptions(files);
-
-  const category = fileTypeFilter?.value || "all";
-  const dateFilter = fileDateFilter?.value || "all";
-  const filteredFiles = files.filter((item) => {
-    const categoryMatches = category === "all" || getFileCategory(item) === category;
-    const dateMatches = dateFilter === "all" || formatDateInput(new Date(item.createdAt)) === dateFilter;
-    return categoryMatches && dateMatches;
-  });
+  const visibleFiles = filterManagedFiles(files);
+  renderFileFolders(files);
 
   if (fileManagerSummary) {
-    fileManagerSummary.textContent = `${filteredFiles.length} / ${files.length} 个文件`;
+    fileManagerSummary.textContent = `${visibleFiles.length} / ${files.length} 个文件`;
+  }
+  if (fileManagerBreadcrumb) {
+    fileManagerBreadcrumb.textContent = getFileManagerTitle();
   }
 
   fileManagerEl.innerHTML = "";
-  if (!filteredFiles.length) {
+  if (!visibleFiles.length) {
     const empty = document.createElement("div");
     empty.className = "empty compact-empty";
     empty.textContent = "没有符合条件的文件";
@@ -265,61 +297,161 @@ function renderFileManager() {
     return;
   }
 
-  const groups = groupFilesByDate(filteredFiles);
-  for (const [date, groupFiles] of groups) {
-    const group = document.createElement("section");
-    group.className = "file-day";
-
-    const header = document.createElement("div");
-    header.className = "file-day-header";
-
-    const title = document.createElement("h3");
-    title.textContent = formatDateLabel(date);
-
-    const count = document.createElement("span");
-    count.textContent = `${groupFiles.length} 个文件`;
-
-    const list = document.createElement("div");
-    list.className = "file-day-items";
-
-    for (const file of groupFiles) {
-      list.append(renderManagedFile(file));
-    }
-
-    header.append(title, count);
-    group.append(header, list);
-    fileManagerEl.append(group);
+  for (const file of visibleFiles) {
+    fileManagerEl.append(renderManagedFile(file));
   }
 }
 
-function syncFileDateOptions(files) {
-  if (!fileDateFilter) return;
+function filterManagedFiles(files) {
+  return files.filter((item) => {
+    const categoryMatches = state.fileManager.category === "all" || getFileCategory(item) === state.fileManager.category;
+    const dateMatches = state.fileManager.date === "all" || formatDateInput(new Date(item.createdAt)) === state.fileManager.date;
+    const searchMatches = !state.fileManager.search || String(item.name || "").toLowerCase().includes(state.fileManager.search);
+    return categoryMatches && dateMatches && searchMatches;
+  });
+}
 
-  const current = fileDateFilter.value || "all";
+function renderFileFolders(files) {
+  if (!fileManagerFolders) return;
+
+  const folders = [
+    { type: "category", value: "all", label: "全部文件", count: files.length },
+    { type: "category", value: "image", label: "图片", count: countFilesByCategory(files, "image") },
+    { type: "category", value: "document", label: "文档", count: countFilesByCategory(files, "document") },
+    { type: "category", value: "other", label: "其他", count: countFilesByCategory(files, "other") }
+  ];
   const dates = [...new Set(files.map((item) => formatDateInput(new Date(item.createdAt))))].sort((a, b) => b.localeCompare(a));
-  fileDateFilter.innerHTML = "";
-  fileDateFilter.append(new Option("全部日期", "all"));
-  for (const date of dates) {
-    fileDateFilter.append(new Option(formatDateLabel(date), date));
-  }
 
-  fileDateFilter.value = current === "all" || dates.includes(current) ? current : "all";
+  fileManagerFolders.innerHTML = "";
+  fileManagerFolders.append(renderFolderGroup("分类", folders));
+
+  const dateFolders = [
+    { type: "date", value: "all", label: "全部日期", count: files.length },
+    ...dates.map((date) => ({
+      type: "date",
+      value: date,
+      label: formatDateLabel(date),
+      count: files.filter((item) => formatDateInput(new Date(item.createdAt)) === date).length
+    }))
+  ];
+  fileManagerFolders.append(renderFolderGroup("日期", dateFolders));
 }
 
-function groupFilesByDate(files) {
-  const groups = new Map();
-  for (const file of files) {
-    const date = formatDateInput(new Date(file.createdAt));
-    if (!groups.has(date)) groups.set(date, []);
-    groups.get(date).push(file);
+function renderFolderGroup(title, folders) {
+  const group = document.createElement("div");
+  group.className = "folder-group";
+
+  const heading = document.createElement("div");
+  heading.className = "folder-heading";
+  heading.textContent = title;
+  group.append(heading);
+
+  for (const folder of folders) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "folder-button";
+    button.dataset.folderType = folder.type;
+    button.dataset.folderValue = folder.value;
+    button.classList.toggle("active", isFolderActive(folder));
+
+    const name = document.createElement("span");
+    name.textContent = folder.label;
+
+    const count = document.createElement("small");
+    count.textContent = folder.count;
+
+    button.append(name, count);
+    group.append(button);
   }
-  return [...groups.entries()].sort(([left], [right]) => right.localeCompare(left));
+
+  return group;
+}
+
+function handleFolderClick(event) {
+  const button = event.target.closest("[data-folder-type]");
+  if (!button) return;
+
+  if (button.dataset.folderType === "category") {
+    state.fileManager.category = button.dataset.folderValue || "all";
+  }
+  if (button.dataset.folderType === "date") {
+    state.fileManager.date = button.dataset.folderValue || "all";
+  }
+  renderFileManager();
+}
+
+function isFolderActive(folder) {
+  if (folder.type === "category") return state.fileManager.category === folder.value;
+  if (folder.type === "date") return state.fileManager.date === folder.value;
+  return false;
+}
+
+function countFilesByCategory(files, category) {
+  return files.filter((item) => getFileCategory(item) === category).length;
+}
+
+function getFileManagerTitle() {
+  const categoryMap = new Map([
+    ["all", "全部文件"],
+    ["image", "图片"],
+    ["document", "文档"],
+    ["other", "其他"]
+  ]);
+  const parts = [categoryMap.get(state.fileManager.category) || "全部文件"];
+  if (state.fileManager.date !== "all") parts.push(formatDateLabel(state.fileManager.date));
+  if (state.fileManager.search) parts.push(`搜索：${state.fileManager.search}`);
+  return parts.join(" / ");
 }
 
 function renderManagedFile(item) {
-  const node = renderFile(item);
-  const badge = node.querySelector(".badge");
-  if (badge) badge.textContent = getFileCategoryLabel(item);
+  const node = document.createElement("article");
+  node.className = "item explorer-file";
+  node.dataset.id = item.id;
+
+  const thumb = document.createElement("div");
+  thumb.className = "thumb";
+  if (item.mimeType?.startsWith("image/")) {
+    const img = document.createElement("img");
+    img.src = item.url;
+    img.alt = item.name;
+    thumb.append(img);
+  }
+
+  const main = document.createElement("div");
+  main.className = "item-main";
+
+  const badge = document.createElement("div");
+  badge.className = "badge";
+  badge.textContent = getFileCategoryLabel(item);
+
+  const filename = document.createElement("p");
+  filename.className = "filename";
+  filename.textContent = item.name;
+
+  const meta = document.createElement("time");
+  meta.textContent = formatSize(item.size);
+
+  const date = document.createElement("time");
+  date.className = "file-date";
+  date.textContent = formatTime(item.createdAt);
+
+  const actions = document.createElement("div");
+  actions.className = "actions";
+
+  const download = document.createElement("a");
+  download.dataset.action = "download";
+  download.href = item.url;
+  download.download = item.name;
+  download.textContent = "下载";
+
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.dataset.action = "delete";
+  remove.textContent = "删除";
+
+  main.append(badge, filename, meta);
+  actions.append(download, remove);
+  node.append(thumb, main, date, actions);
   return node;
 }
 

@@ -14,9 +14,12 @@
           <p class="eyebrow">Private Relay</p>
           <h1>Pass</h1>
         </div>
-        <button class="icon-button" id="refreshButton" type="button" title="刷新">
-          <span aria-hidden="true">↻</span>
-        </button>
+        <div class="topbar-actions">
+          <button class="tool-button" id="fileManagerButton" type="button">文件</button>
+          <button class="icon-button" id="refreshButton" type="button" title="刷新">
+            <span aria-hidden="true">↻</span>
+          </button>
+        </div>
       </section>
 
       <section class="composer" aria-label="发送内容">
@@ -48,31 +51,6 @@
         <div class="items" id="items"></div>
       </section>
 
-      <section class="manager" aria-label="文件管理">
-        <div class="section-title">
-          <h2>文件管理</h2>
-          <span id="fileManagerSummary">0 个文件</span>
-        </div>
-        <div class="manager-controls">
-          <label>
-            <span>类型</span>
-            <select id="fileTypeFilter">
-              <option value="all">全部文件</option>
-              <option value="image">图片</option>
-              <option value="document">文档</option>
-              <option value="other">其他</option>
-            </select>
-          </label>
-          <label>
-            <span>日期</span>
-            <select id="fileDateFilter">
-              <option value="all">全部日期</option>
-            </select>
-          </label>
-        </div>
-        <div class="file-manager" id="fileManager"></div>
-      </section>
-
       <section class="cleanup" aria-label="清理记录">
         <div class="section-title">
           <h2>清理记录</h2>
@@ -92,6 +70,41 @@
       </section>
 
     </main>
+
+    <section class="file-explorer" id="fileExplorer" aria-label="文件管理" hidden>
+      <div class="explorer-shell">
+        <header class="explorer-header">
+          <div>
+            <p class="eyebrow">File Manager</p>
+            <h2>文件管理</h2>
+          </div>
+          <div class="explorer-header-actions">
+            <span id="fileManagerSummary">0 个文件</span>
+            <button class="icon-button" id="fileExplorerClose" type="button" title="关闭">×</button>
+          </div>
+        </header>
+
+        <div class="explorer-body">
+          <aside class="explorer-sidebar" id="fileManagerFolders" aria-label="文件夹"></aside>
+
+          <section class="explorer-main" aria-label="文件列表">
+            <div class="explorer-toolbar">
+              <div class="breadcrumb" id="fileManagerBreadcrumb">全部文件</div>
+              <label class="search-field">
+                <span>搜索</span>
+                <input id="fileSearch" type="search" placeholder="文件名">
+              </label>
+            </div>
+            <div class="explorer-list-header" aria-hidden="true">
+              <span>名称</span>
+              <span>日期</span>
+              <span>操作</span>
+            </div>
+            <div class="file-manager" id="fileManager"></div>
+          </section>
+        </div>
+      </div>
+    </section>
 
     <template id="textTemplate">
       <article class="item">

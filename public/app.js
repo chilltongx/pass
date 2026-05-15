@@ -13,6 +13,9 @@ const queueEl = document.querySelector("#queue");
 const addressesEl = document.querySelector("#addresses");
 const qrImage = document.querySelector("#qrImage");
 const qrUrl = document.querySelector("#qrUrl");
+const cleanupStart = document.querySelector("#cleanupStart");
+const cleanupEnd = document.querySelector("#cleanupEnd");
+const cleanupButton = document.querySelector("#cleanupButton");
 
 document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -26,6 +29,13 @@ document.querySelectorAll(".tab").forEach((tab) => {
 document.querySelector("#refreshButton").addEventListener("click", refreshAll);
 sendTextButton.addEventListener("click", sendText);
 fileInput.addEventListener("change", () => uploadFiles(fileInput.files));
+cleanupButton?.addEventListener("click", cleanupRange);
+
+if (cleanupStart && cleanupEnd) {
+  const today = formatDateInput(new Date());
+  cleanupStart.value = today;
+  cleanupEnd.value = today;
+}
 
 ["dragenter", "dragover"].forEach((eventName) => {
   dropzone.addEventListener(eventName, (event) => {
@@ -181,6 +191,43 @@ async function refresh() {
   setStatus(`${state.items.length} 条记录`);
 }
 
+async function cleanupRange() {
+  const startDate = cleanupStart?.value || "";
+  const endDate = cleanupEnd?.value || "";
+
+  if (!startDate || !endDate) {
+    setStatus("请选择开始日期和结束日期");
+    return;
+  }
+
+  if (startDate > endDate) {
+    setStatus("开始日期不能晚于结束日期");
+    return;
+  }
+
+  const matched = state.items.filter((item) => {
+    const date = formatDateInput(new Date(item.createdAt));
+    return date >= startDate && date <= endDate;
+  }).length;
+  const message = `确定清理 ${startDate} 到 ${endDate} 的记录吗？预计影响 ${matched} 条，删除后不能恢复。`;
+  if (!window.confirm(message)) return;
+
+  cleanupButton.disabled = true;
+  setStatus("正在清理记录");
+
+  try {
+    const response = await requestJson("/api/cleanup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ startDate, endDate })
+    });
+    await refresh();
+    setStatus(`已清理 ${response.deletedTotal || 0} 条记录`);
+  } finally {
+    cleanupButton.disabled = false;
+  }
+}
+
 function renderItems() {
   itemsEl.innerHTML = "";
 
@@ -287,6 +334,13 @@ function formatTime(value) {
     hour: "2-digit",
     minute: "2-digit"
   }).format(new Date(value));
+}
+
+function formatDateInput(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function formatSize(bytes) {

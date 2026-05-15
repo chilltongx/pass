@@ -78,7 +78,8 @@ h1 {
 
 .connect,
 .composer,
-.history {
+.history,
+.cleanup {
   background: rgba(255, 253, 248, 0.88);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -282,6 +283,11 @@ textarea {
   padding: 16px;
 }
 
+.cleanup {
+  margin-top: 18px;
+  padding: 16px;
+}
+
 .section-title {
   display: flex;
   align-items: baseline;
@@ -400,6 +406,47 @@ time {
   color: var(--rose);
 }
 
+.cleanup-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.cleanup-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.cleanup-form input {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  padding: 0 10px;
+  outline-color: var(--accent);
+}
+
+.danger {
+  min-height: 42px;
+  border: 1px solid var(--rose);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--rose);
+  cursor: pointer;
+  padding: 0 16px;
+  font-weight: 800;
+}
+
+.danger:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
 @media (max-width: 680px) {
   .shell {
     width: min(100% - 20px, 980px);
@@ -442,5 +489,9 @@ time {
   .actions button,
   .actions a {
     flex: 1;
+  }
+
+  .cleanup-form {
+    grid-template-columns: 1fr;
   }
 }

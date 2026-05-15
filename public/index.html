@@ -48,6 +48,24 @@
         <div class="items" id="items"></div>
       </section>
 
+      <section class="cleanup" aria-label="清理记录">
+        <div class="section-title">
+          <h2>清理记录</h2>
+          <span>按日期删除文字和文件</span>
+        </div>
+        <div class="cleanup-form">
+          <label>
+            <span>开始日期</span>
+            <input id="cleanupStart" type="date">
+          </label>
+          <label>
+            <span>结束日期</span>
+            <input id="cleanupEnd" type="date">
+          </label>
+          <button class="danger" id="cleanupButton" type="button">清理</button>
+        </div>
+      </section>
+
     </main>
 
     <template id="textTemplate">

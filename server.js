@@ -88,6 +88,10 @@ const server = createServer(async (req, res) => {
       return await handleDelete(req, res, url.pathname);
     }
 
+    if (url.pathname === "/api/cleanup" && req.method === "POST") {
+      return await handleCleanup(req, res);
+    }
+
     if (req.method === "GET") {
       return await serveStatic(req, res, url.pathname);
     }
@@ -293,6 +297,52 @@ async function handleDelete(req, res, pathname) {
   sendJson(res, { error: "Not found" }, 404);
 }
 
+async function handleCleanup(req, res) {
+  const body = await readBody(req, 16 * 1024);
+  let payload;
+  let range;
+  try {
+    payload = JSON.parse(body || "{}");
+    range = parseCleanupRange(payload.startDate, payload.endDate);
+  } catch (error) {
+    return sendJson(res, { error: error.message || "Invalid cleanup range" }, 400);
+  }
+
+  const texts = await readTexts();
+  const remainingTexts = [];
+  let deletedTexts = 0;
+
+  for (const item of texts) {
+    if (isDateInRange(item.createdAt, range)) {
+      deletedTexts += 1;
+    } else {
+      remainingTexts.push(item);
+    }
+  }
+
+  if (deletedTexts > 0) {
+    await writeTexts(remainingTexts);
+  }
+
+  const files = await readFiles();
+  let deletedFiles = 0;
+  for (const file of files) {
+    if (isDateInRange(file.createdAt, range)) {
+      await rm(resolveInside(filesDir, file.storedName), { force: true });
+      deletedFiles += 1;
+    }
+  }
+
+  sendJson(res, {
+    ok: true,
+    startDate: range.startDate,
+    endDate: range.endDate,
+    deletedTexts,
+    deletedFiles,
+    deletedTotal: deletedTexts + deletedFiles
+  });
+}
+
 async function serveStatic(req, res, pathname) {
   if (pathname === "/favicon.ico") {
     res.writeHead(204, { "Cache-Control": "no-store" });
@@ -416,6 +466,49 @@ function sendUnauthorized(res) {
     "Cache-Control": "no-store"
   });
   res.end("Authentication required");
+}
+
+function parseCleanupRange(startDate, endDate) {
+  const start = parseDateKey(startDate, "startDate");
+  const end = parseDateKey(endDate, "endDate");
+  if (start > end) {
+    throw new Error("Start date cannot be after end date");
+  }
+  return { startDate: start, endDate: end };
+}
+
+function parseDateKey(value, fieldName) {
+  const date = String(value || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new Error(`${fieldName} must use YYYY-MM-DD`);
+  }
+
+  const [year, month, day] = date.split("-").map(Number);
+  const parsed = new Date(year, month - 1, day);
+  if (
+    parsed.getFullYear() !== year
+    || parsed.getMonth() !== month - 1
+    || parsed.getDate() !== day
+  ) {
+    throw new Error(`${fieldName} is not a valid date`);
+  }
+
+  return date;
+}
+
+function isDateInRange(value, range) {
+  const dateKey = toLocalDateKey(value);
+  return dateKey >= range.startDate && dateKey <= range.endDate;
+}
+
+function toLocalDateKey(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function setRememberCookie(req, res, user) {

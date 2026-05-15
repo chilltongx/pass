@@ -5,6 +5,7 @@ APP_DIR="${APP_DIR:-/opt/pass}"
 APP_USER="${APP_USER:-root}"
 PORT="${PORT:-6789}"
 MAX_UPLOAD_MB="${MAX_UPLOAD_MB:-500}"
+PASS_REMEMBER_DAYS="${PASS_REMEMBER_DAYS:-30}"
 
 if [[ "$(id -u)" -ne 0 ]]; then
   echo "Please run as root: sudo bash scripts/deploy-alicloud-ubuntu.sh"
@@ -69,6 +70,7 @@ Environment=PORT=${PORT}
 Environment=PUBLIC_URL=${PUBLIC_URL}
 Environment=PASS_USER=pass
 Environment=PASS_PASSWORD=${PASS_PASSWORD}
+Environment=PASS_REMEMBER_DAYS=${PASS_REMEMBER_DAYS}
 Environment=MAX_UPLOAD_MB=${MAX_UPLOAD_MB}
 ExecStart=$(command -v node) ${APP_DIR}/server.js
 Restart=always

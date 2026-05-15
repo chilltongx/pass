@@ -62,6 +62,7 @@ http://localhost:6789
 | `PASS_PASSWORD` | 空 | Basic Auth 密码，公网部署必须设置 |
 | `PASS_TOKEN` | 空 | `PASS_PASSWORD` 的兼容别名 |
 | `PASS_ACCOUNTS` | 空 | 多账号配置，格式为 `user1:pass1,user2:pass2` |
+| `PASS_REMEMBER_DAYS` | `30` | 登录成功后在同一浏览器保持登录的天数，设为 `0` 可关闭记住登录 |
 | `MAX_UPLOAD_MB` | `500` | 单个上传请求的最大体积 |
 
 示例 `.env` 内容：
@@ -71,6 +72,7 @@ PORT=6789
 PUBLIC_URL=https://pass.example.com
 PASS_USER=pass
 PASS_PASSWORD=change-this-to-a-long-random-password
+PASS_REMEMBER_DAYS=30
 MAX_UPLOAD_MB=500
 ```
 
@@ -103,6 +105,7 @@ Environment=PORT=6789
 Environment=PUBLIC_URL=https://pass.example.com
 Environment=PASS_USER=pass
 Environment=PASS_PASSWORD=change-this-to-a-long-random-password
+Environment=PASS_REMEMBER_DAYS=30
 Environment=MAX_UPLOAD_MB=500
 ExecStart=/usr/bin/node /opt/pass/server.js
 Restart=always

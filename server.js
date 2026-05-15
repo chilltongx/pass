@@ -4,7 +4,7 @@ import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/p
 import { extname, join, normalize, resolve } from "node:path";
 import { networkInterfaces } from "node:os";
 import { pipeline } from "node:stream/promises";
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import QRCode from "qrcode";
 
 const rootDir = process.cwd();
@@ -18,6 +18,9 @@ const publicUrl = normalizePublicUrl(process.env.PUBLIC_URL || "");
 const authUser = process.env.PASS_USER || "pass";
 const authPassword = process.env.PASS_PASSWORD || process.env.PASS_TOKEN || "";
 const authAccounts = parseAuthAccounts(process.env.PASS_ACCOUNTS || "", authUser, authPassword);
+const rememberDays = parseNonNegativeNumber(process.env.PASS_REMEMBER_DAYS, 30);
+const rememberMaxAgeSeconds = Math.floor(rememberDays * 24 * 60 * 60);
+const rememberCookieName = "pass_session";
 const storedNameSeparator = "__";
 
 const mimeTypes = new Map([
@@ -41,8 +44,12 @@ const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
 
-    if (!isAuthorized(req)) {
+    const authorization = getAuthorization(req);
+    if (!authorization.authorized) {
       return sendUnauthorized(res);
+    }
+    if (authorization.user && rememberMaxAgeSeconds > 0) {
+      setRememberCookie(req, res, authorization.user);
     }
 
     if (url.pathname === "/api/health") {
@@ -347,25 +354,34 @@ function sendJson(res, payload, statusCode = 200) {
   res.end(body);
 }
 
-function isAuthorized(req) {
-  if (!authAccounts.size) return true;
+function getAuthorization(req) {
+  if (!authAccounts.size) return { authorized: true };
+
+  const rememberedUser = verifyRememberCookie(req);
+  if (rememberedUser && authAccounts.has(rememberedUser)) {
+    return { authorized: true, user: rememberedUser };
+  }
 
   const header = String(req.headers.authorization || "");
-  if (!header.startsWith("Basic ")) return false;
+  if (!header.startsWith("Basic ")) return { authorized: false };
 
   let decoded = "";
   try {
     decoded = Buffer.from(header.slice("Basic ".length), "base64").toString("utf8");
   } catch {
-    return false;
+    return { authorized: false };
   }
 
   const separator = decoded.indexOf(":");
-  if (separator < 0) return false;
+  if (separator < 0) return { authorized: false };
 
   const user = decoded.slice(0, separator);
   const password = decoded.slice(separator + 1);
-  return authAccounts.get(user) === password;
+  if (authAccounts.get(user) !== password) {
+    return { authorized: false };
+  }
+
+  return { authorized: true, user };
 }
 
 function parseAuthAccounts(value, fallbackUser, fallbackPassword) {
@@ -388,6 +404,11 @@ function parseAuthAccounts(value, fallbackUser, fallbackPassword) {
   return accounts;
 }
 
+function parseNonNegativeNumber(value, fallback) {
+  const parsed = Number(value ?? fallback);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
 function sendUnauthorized(res) {
   res.writeHead(401, {
     "WWW-Authenticate": 'Basic realm="Pass", charset="UTF-8"',
@@ -395,6 +416,72 @@ function sendUnauthorized(res) {
     "Cache-Control": "no-store"
   });
   res.end("Authentication required");
+}
+
+function setRememberCookie(req, res, user) {
+  const expiresAt = Date.now() + rememberMaxAgeSeconds * 1000;
+  const payload = Buffer.from(JSON.stringify({ user, expiresAt }), "utf8").toString("base64url");
+  const signature = signRememberPayload(payload);
+  const secure = isHttpsRequest(req) ? "; Secure" : "";
+  res.setHeader(
+    "Set-Cookie",
+    `${rememberCookieName}=${payload}.${signature}; Max-Age=${rememberMaxAgeSeconds}; Path=/; HttpOnly; SameSite=Lax${secure}`
+  );
+}
+
+function verifyRememberCookie(req) {
+  const cookies = parseCookies(req.headers.cookie || "");
+  const value = cookies.get(rememberCookieName);
+  if (!value) return "";
+
+  const separator = value.lastIndexOf(".");
+  if (separator <= 0) return "";
+
+  const payload = value.slice(0, separator);
+  const signature = value.slice(separator + 1);
+  if (!safeEqual(signature, signRememberPayload(payload))) return "";
+
+  try {
+    const decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    if (!decoded.user || Number(decoded.expiresAt) < Date.now()) return "";
+    return String(decoded.user);
+  } catch {
+    return "";
+  }
+}
+
+function signRememberPayload(payload) {
+  return createHmac("sha256", getRememberSecret()).update(payload).digest("base64url");
+}
+
+function getRememberSecret() {
+  return [...authAccounts.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([user, password]) => `${user}\0${password}`)
+    .join("\0");
+}
+
+function parseCookies(header) {
+  const cookies = new Map();
+  for (const part of String(header || "").split(";")) {
+    const separator = part.indexOf("=");
+    if (separator <= 0) continue;
+    const name = part.slice(0, separator).trim();
+    const value = part.slice(separator + 1).trim();
+    if (name) cookies.set(name, value);
+  }
+  return cookies;
+}
+
+function safeEqual(left, right) {
+  const leftBuffer = Buffer.from(String(left));
+  const rightBuffer = Buffer.from(String(right));
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function isHttpsRequest(req) {
+  const forwardedProto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim();
+  return forwardedProto === "https" || publicUrl.startsWith("https://");
 }
 
 function sanitizeFilename(name) {

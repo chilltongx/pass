@@ -79,6 +79,7 @@ h1 {
 .connect,
 .composer,
 .history,
+.manager,
 .cleanup {
   background: rgba(255, 253, 248, 0.88);
   border: 1px solid var(--line);
@@ -283,6 +284,11 @@ textarea {
   padding: 16px;
 }
 
+.manager {
+  margin-top: 18px;
+  padding: 16px;
+}
+
 .cleanup {
   margin-top: 18px;
   padding: 16px;
@@ -316,6 +322,10 @@ textarea {
   place-items: center;
   color: var(--muted);
   text-align: center;
+}
+
+.compact-empty {
+  min-height: 92px;
 }
 
 .item {
@@ -406,6 +416,64 @@ time {
   color: var(--rose);
 }
 
+.manager-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.manager-controls label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.manager-controls select {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  padding: 0 10px;
+  outline-color: var(--accent);
+}
+
+.file-manager {
+  display: grid;
+  gap: 14px;
+}
+
+.file-day {
+  display: grid;
+  gap: 8px;
+}
+
+.file-day-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 2px;
+}
+
+.file-day-header h3 {
+  margin: 0;
+  font-size: 0.98rem;
+}
+
+.file-day-header span {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.file-day-items {
+  display: grid;
+  gap: 8px;
+}
+
 .cleanup-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
@@ -489,6 +557,10 @@ time {
   .actions button,
   .actions a {
     flex: 1;
+  }
+
+  .manager-controls {
+    grid-template-columns: 1fr;
   }
 
   .cleanup-form {

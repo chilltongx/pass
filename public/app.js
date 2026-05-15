@@ -16,6 +16,10 @@ const qrUrl = document.querySelector("#qrUrl");
 const cleanupStart = document.querySelector("#cleanupStart");
 const cleanupEnd = document.querySelector("#cleanupEnd");
 const cleanupButton = document.querySelector("#cleanupButton");
+const fileManagerEl = document.querySelector("#fileManager");
+const fileManagerSummary = document.querySelector("#fileManagerSummary");
+const fileTypeFilter = document.querySelector("#fileTypeFilter");
+const fileDateFilter = document.querySelector("#fileDateFilter");
 
 document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -30,6 +34,8 @@ document.querySelector("#refreshButton").addEventListener("click", refreshAll);
 sendTextButton.addEventListener("click", sendText);
 fileInput.addEventListener("change", () => uploadFiles(fileInput.files));
 cleanupButton?.addEventListener("click", cleanupRange);
+fileTypeFilter?.addEventListener("change", renderFileManager);
+fileDateFilter?.addEventListener("change", renderFileManager);
 
 if (cleanupStart && cleanupEnd) {
   const today = formatDateInput(new Date());
@@ -56,7 +62,10 @@ dropzone.addEventListener("drop", (event) => {
   uploadFiles(files);
 });
 
-itemsEl.addEventListener("click", async (event) => {
+itemsEl.addEventListener("click", handleItemAction);
+fileManagerEl?.addEventListener("click", handleItemAction);
+
+async function handleItemAction(event) {
   const action = event.target?.dataset?.action;
   const itemEl = event.target.closest(".item");
   if (!action || !itemEl) return;
@@ -73,7 +82,7 @@ itemsEl.addEventListener("click", async (event) => {
     await request(`/api/items/${encodeURIComponent(item.id)}`, { method: "DELETE" });
     await refresh();
   }
-});
+}
 
 await refreshAll();
 setInterval(refresh, 5000);
@@ -188,6 +197,7 @@ async function refresh() {
   const items = await requestJson("/api/items");
   state.items = Array.isArray(items) ? items : [];
   renderItems();
+  renderFileManager();
   setStatus(`${state.items.length} 条记录`);
 }
 
@@ -226,6 +236,116 @@ async function cleanupRange() {
   } finally {
     cleanupButton.disabled = false;
   }
+}
+
+function renderFileManager() {
+  if (!fileManagerEl) return;
+
+  const files = state.items.filter((item) => item.type === "file");
+  syncFileDateOptions(files);
+
+  const category = fileTypeFilter?.value || "all";
+  const dateFilter = fileDateFilter?.value || "all";
+  const filteredFiles = files.filter((item) => {
+    const categoryMatches = category === "all" || getFileCategory(item) === category;
+    const dateMatches = dateFilter === "all" || formatDateInput(new Date(item.createdAt)) === dateFilter;
+    return categoryMatches && dateMatches;
+  });
+
+  if (fileManagerSummary) {
+    fileManagerSummary.textContent = `${filteredFiles.length} / ${files.length} 个文件`;
+  }
+
+  fileManagerEl.innerHTML = "";
+  if (!filteredFiles.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty compact-empty";
+    empty.textContent = "没有符合条件的文件";
+    fileManagerEl.append(empty);
+    return;
+  }
+
+  const groups = groupFilesByDate(filteredFiles);
+  for (const [date, groupFiles] of groups) {
+    const group = document.createElement("section");
+    group.className = "file-day";
+
+    const header = document.createElement("div");
+    header.className = "file-day-header";
+
+    const title = document.createElement("h3");
+    title.textContent = formatDateLabel(date);
+
+    const count = document.createElement("span");
+    count.textContent = `${groupFiles.length} 个文件`;
+
+    const list = document.createElement("div");
+    list.className = "file-day-items";
+
+    for (const file of groupFiles) {
+      list.append(renderManagedFile(file));
+    }
+
+    header.append(title, count);
+    group.append(header, list);
+    fileManagerEl.append(group);
+  }
+}
+
+function syncFileDateOptions(files) {
+  if (!fileDateFilter) return;
+
+  const current = fileDateFilter.value || "all";
+  const dates = [...new Set(files.map((item) => formatDateInput(new Date(item.createdAt))))].sort((a, b) => b.localeCompare(a));
+  fileDateFilter.innerHTML = "";
+  fileDateFilter.append(new Option("全部日期", "all"));
+  for (const date of dates) {
+    fileDateFilter.append(new Option(formatDateLabel(date), date));
+  }
+
+  fileDateFilter.value = current === "all" || dates.includes(current) ? current : "all";
+}
+
+function groupFilesByDate(files) {
+  const groups = new Map();
+  for (const file of files) {
+    const date = formatDateInput(new Date(file.createdAt));
+    if (!groups.has(date)) groups.set(date, []);
+    groups.get(date).push(file);
+  }
+  return [...groups.entries()].sort(([left], [right]) => right.localeCompare(left));
+}
+
+function renderManagedFile(item) {
+  const node = renderFile(item);
+  const badge = node.querySelector(".badge");
+  if (badge) badge.textContent = getFileCategoryLabel(item);
+  return node;
+}
+
+function getFileCategory(item) {
+  const mimeType = String(item.mimeType || "").toLowerCase();
+  const name = String(item.name || "").toLowerCase();
+
+  if (mimeType.startsWith("image/")) return "image";
+  if (
+    mimeType.includes("pdf")
+    || mimeType.includes("word")
+    || mimeType.includes("excel")
+    || mimeType.includes("spreadsheet")
+    || mimeType.includes("powerpoint")
+    || /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt|md|csv|rtf)$/i.test(name)
+  ) {
+    return "document";
+  }
+  return "other";
+}
+
+function getFileCategoryLabel(item) {
+  const category = getFileCategory(item);
+  if (category === "image") return "图片";
+  if (category === "document") return "文档";
+  return "其他";
 }
 
 function renderItems() {
@@ -341,6 +461,15 @@ function formatDateInput(date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function formatDateLabel(dateKey) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(new Date(year, month - 1, day));
 }
 
 function formatSize(bytes) {

@@ -48,6 +48,31 @@
         <div class="items" id="items"></div>
       </section>
 
+      <section class="manager" aria-label="文件管理">
+        <div class="section-title">
+          <h2>文件管理</h2>
+          <span id="fileManagerSummary">0 个文件</span>
+        </div>
+        <div class="manager-controls">
+          <label>
+            <span>类型</span>
+            <select id="fileTypeFilter">
+              <option value="all">全部文件</option>
+              <option value="image">图片</option>
+              <option value="document">文档</option>
+              <option value="other">其他</option>
+            </select>
+          </label>
+          <label>
+            <span>日期</span>
+            <select id="fileDateFilter">
+              <option value="all">全部日期</option>
+            </select>
+          </label>
+        </div>
+        <div class="file-manager" id="fileManager"></div>
+      </section>
+
       <section class="cleanup" aria-label="清理记录">
         <div class="section-title">
           <h2>清理记录</h2>
